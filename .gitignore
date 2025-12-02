@@ -1,0 +1,16 @@
+# Virtual environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# Editor
+.vscode/
