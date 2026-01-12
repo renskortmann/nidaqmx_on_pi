@@ -132,7 +132,12 @@ class NidaqmxGUI:
             for device in devices:
                 output += f"Device: {device.name}\n"
                 output += f"  Product Type: {device.product_type}\n"
-                output += f"  Serial Number: {device.serial_number}\n\n"
+                # Use correct attribute name; fall back if unavailable
+                try:
+                    serial = getattr(device, "serial_num")
+                except Exception:
+                    serial = "N/A"
+                output += f"  Serial Number: {serial}\n\n"
             self._output(self.system_output, output)
             self._log("Listed devices successfully.")
         except Exception as e:
