@@ -124,6 +124,43 @@ class NidaqmxGUI:
         widget.config(state=tk.DISABLED)
     
     # System functions
+    def _select_device_name(self) -> str:
+        """Prompt user to select a device name from available devices."""
+        try:
+            devices = nidaqmx.system.System.local().devices
+            device_names = [device.name for device in devices]
+            
+            if not device_names:
+                messagebox.showwarning("Warning", "No devices found.")
+                return ""
+            
+            # Create a simple dialog with dropdown
+            dialog = tk.Toplevel(self.root)
+            dialog.title("Select Device")
+            dialog.geometry("300x100")
+            dialog.transient(self.root)
+            dialog.grab_set()
+            
+            ttk.Label(dialog, text="Select a device:").pack(pady=5)
+            device_var = tk.StringVar(value=device_names[0])
+            dropdown = ttk.Combobox(dialog, textvariable=device_var, values=device_names, state="readonly")
+            dropdown.pack(pady=5, padx=5, fill=tk.X)
+            
+            device_name = None
+            
+            def confirm():
+                nonlocal device_name
+                device_name = device_var.get()
+                dialog.destroy()
+            
+            ttk.Button(dialog, text="OK", command=confirm).pack(pady=5)
+            dialog.wait_window()
+            
+            return device_name if device_name else ""
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to get devices: {e}")
+            return ""
+        
     def _list_devices(self) -> None:
         """List all available NI devices."""
         try:
@@ -146,17 +183,71 @@ class NidaqmxGUI:
     
     def _list_channels(self) -> None:
         """List all available channels on devices."""
-        device_name = simpledialog.askstring("Input", "Enter device name (e.g., dev3):")
-        if not device_name:
-            return
+        device_name = self._select_device_name()
+        # try:
+        #     devices = nidaqmx.system.System.local().devices
+        #     device_names = [device.name for device in devices]
+        #     
+        #     if not device_names:
+        #         messagebox.showwarning("Warning", "No devices found.")
+        #         return
+        #     
+        #     # Create a simple dialog with dropdown
+        #     dialog = tk.Toplevel(self.root)
+        #     dialog.title("Select Device")
+        #     dialog.geometry("300x100")
+        #     dialog.transient(self.root)
+        #     dialog.grab_set()
+        #     
+        #     ttk.Label(dialog, text="Select a device:").pack(pady=5)
+        #     device_var = tk.StringVar(value=device_names[0])
+        #     dropdown = ttk.Combobox(dialog, textvariable=device_var, values=device_names, state="readonly")
+        #     dropdown.pack(pady=5, padx=5, fill=tk.X)
+        #     
+        #     device_name = None
+        #     
+        #     def confirm():
+        #         nonlocal device_name
+        #         device_name = device_var.get()
+        #         dialog.destroy()
+        #     
+        #     ttk.Button(dialog, text="OK", command=confirm).pack(pady=5)
+        #     dialog.wait_window()
+        #     
+        #     if not device_name:
+        #         return
+        # except Exception as e:
+        #     messagebox.showerror("Error", f"Failed to get devices: {e}")
+        #     return
+        # if not device_name:
+        #     return
         
         try:
             device = nidaqmx.system.System.local().devices[device_name]
             output = f"Channels on {device_name}:\n" + "-" * 40 + "\n"
-            output += f"AI Channels: {device.ai_physical_chans}\n"
-            output += f"AO Channels: {device.ao_physical_chans}\n"
-            output += f"DI Channels: {device.di_lines}\n"
-            output += f"DO Channels: {device.do_lines}\n"
+            try:
+                ai_chans = device.ai_physical_chans
+                output += f"AI Channels: {', '.join([ch.name for ch in ai_chans]) if ai_chans else 'None'}\n"
+            except Exception:
+                output += "AI Channels: N/A\n"
+            
+            try:
+                ao_chans = device.ao_physical_chans
+                output += f"AO Channels: {', '.join([ch.name for ch in ao_chans]) if ao_chans else 'None'}\n"
+            except Exception:
+                output += "AO Channels: N/A\n"
+            
+            try:
+                di_lines = device.di_lines
+                output += f"DI Channels: {', '.join([line.name for line in di_lines]) if di_lines else 'None'}\n"
+            except Exception:
+                output += "DI Channels: N/A\n"
+            
+            try:
+                do_lines = device.do_lines
+                output += f"DO Channels: {', '.join([line.name for line in do_lines]) if do_lines else 'None'}\n"
+            except Exception:
+                output += "DO Channels: N/A\n"
             self._output(self.system_output, output)
             self._log(f"Listed channels for {device_name}.")
         except Exception as e:
@@ -233,7 +324,8 @@ class NidaqmxGUI:
             messagebox.showwarning("Warning", "No task is open. Create a task first.")
             return
         
-        device = simpledialog.askstring("Input", "Device name (e.g., dev3):")
+#        device = simpledialog.askstring("Input", "Device name (e.g., dev3):")
+        device = self._select_device_name()
         if not device:
             return
         channel = simpledialog.askstring("Input", "Channel name (e.g., ai0):")
